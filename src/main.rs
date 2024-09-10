@@ -14,7 +14,14 @@ fn main() {
     if let Some(sub_args) = matches.subcommand_matches("supports") {
         handle_supports(sub_args);
     } else if let Some(sub_args) = matches.subcommand_matches("cmdrun") {
-        CmdRun::run_cmdrun(sub_args, ".", false);
+        let cmd = sub_args.get_many::<String>("cmd");
+        let correct_exit_code : Option<i32> = if sub_args.get_flag("strict") {
+            Some(&0)
+        } else {
+            sub_args.get_one("expect-return-code")
+        };
+        println!("{:?} {:?}", correct_exit_code, cmd)
+        //CmdRun::run_cmdrun(sub_args, ".", false);
     } else if let Err(e) = handle_preprocessing() {
         eprintln!("{e}");
         process::exit(1);
@@ -29,7 +36,7 @@ fn make_cmdrun_parser() -> Command {
             .help("require the specific return code N")
             .long("expect-return-code")
             .conflicts_with("strict")
-            .conflicts_with("exit-code-short")
+//            .conflicts_with("exit-code-short")
             .num_args(1)
             .value_name("N")
         ).arg(
@@ -37,16 +44,16 @@ fn make_cmdrun_parser() -> Command {
             .help("require command to return the successful exit code 0")
             .long("strict")
             .conflicts_with("expect-return-code")
-            .conflicts_with("exit-code-short")
+//            .conflicts_with("exit-code-short")
             .action(clap::ArgAction::SetTrue)
-        ).arg(
-            Arg::new("exit-code-short")
-            .help("require the specific exit code N")
-            .conflicts_with("expect-return-code")
-            .conflicts_with("strict")
-            .value_name("-N")
-            .allow_negative_numbers(true)
-            .value_parser(..=0)
+//        ).arg(
+//            Arg::new("exit-code-short")
+//            .help("require the specific exit code N")
+//            .conflicts_with("expect-return-code")
+//            .conflicts_with("strict")
+//            .value_name("-N")
+//            .allow_negative_numbers(true)
+//            .value_parser(..=0)
         ).arg(
             Arg::new("cmd")
             .help("command whose output will be injected into book")
