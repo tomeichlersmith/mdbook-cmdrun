@@ -175,7 +175,7 @@ impl CmdRun {
                             Some(0),
                         ),
                         "--expect-return-code" => {
-                            if let Some(second_word) = command.split_whitespace().skip(1).next() {
+                            if let Some(second_word) = command.split_whitespace().nth(1) {
                                 (
                                     command
                                         .split_whitespace()
