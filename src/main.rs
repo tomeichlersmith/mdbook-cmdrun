@@ -1,4 +1,4 @@
-use clap::{Arg, ArgMatches, Command, value_parser};
+use clap::{Arg, ArgMatches, Command};
 use mdbook::errors::Error;
 use mdbook::preprocess::CmdPreprocessor;
 use mdbook::preprocess::Preprocessor;
@@ -16,14 +16,13 @@ fn main() {
             if let Some(sub_args) = matches.subcommand_matches("supports") {
                 handle_supports(sub_args);
             } else if let Some(sub_args) = matches.subcommand_matches("cmdrun") {
-                let cmd = sub_args.try_get_many::<String>("cmd");
-                let correct_exit_code = if sub_args.get_flag("strict") {
-                    Ok(Some(&0))
-                } else {
-                    sub_args.try_get_one("expect-return-code")
-                };
-                println!("{:?} {:?}", correct_exit_code, cmd)
-                //CmdRun::run_cmdrun(sub_args, ".", false);
+                let text : String = sub_args
+                    .try_get_many::<String>("text")
+                    .expect("able to parse a command and not get Err")
+                    .expect("able to parse a command and not get None")
+                    .map(|s| s.as_str())
+                    .collect();
+                println!("{}", CmdRun::run_cmdrun(text, ".", false).unwrap());
             } else if let Err(e) = handle_preprocessing() {
                 eprintln!("{e}");
                 process::exit(1);
@@ -31,41 +30,6 @@ fn main() {
         },
         Err(e) => e.exit()
     }
-}
-
-fn make_cmdrun_parser() -> Command {
-    Command::new("cmdrun")
-        .about("test run a command before putting it in a book")
-        .arg(
-            Arg::new("expect-return-code")
-            .help("require the specific return code N")
-            .long("expect-return-code")
-            .conflicts_with("strict")
-//            .conflicts_with("exit-code-short")
-            .num_args(1)
-            .value_name("N")
-            .value_parser(value_parser!(i32))
-        ).arg(
-            Arg::new("strict")
-            .help("require command to return the successful exit code 0")
-            .long("strict")
-            .conflicts_with("expect-return-code")
-//            .conflicts_with("exit-code-short")
-            .action(clap::ArgAction::SetTrue)
-//        ).arg(
-//            Arg::new("exit-code-short")
-//            .help("require the specific exit code N")
-//            .conflicts_with("expect-return-code")
-//            .conflicts_with("strict")
-//            .value_name("-N")
-//            .allow_negative_numbers(true)
-//            .value_parser(..=0)
-        ).arg(
-            Arg::new("cmd")
-            .help("command whose output will be injected into book")
-            .num_args(1..)
-            .trailing_var_arg(true)
-        )
 }
 
 fn make_app() -> Command {
@@ -76,7 +40,8 @@ fn make_app() -> Command {
                 .arg(Arg::new("renderer").required(true))
                 .about("Check whether a renderer is supported by this preprocessor"),
         ).subcommand(
-            make_cmdrun_parser()
+            Command::new("cmdrun")
+                .arg(Arg::new("text").num_args(1..).trailing_var_arg(true))
         )
 }
 
