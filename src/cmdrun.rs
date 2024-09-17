@@ -164,12 +164,13 @@ impl CmdRun {
         let parser = make_cmdrun_parser();
         let matches = parser.try_get_matches_from(command.split_whitespace())?;
 
-        let cmd : Vec<_> = matches
+        let cmd : String = matches
             .try_get_many::<String>("cmd")
             .expect("able to parse a command and not get Err")
             .expect("able to parse a command and not get None")
             .map(|s| s.as_str())
-            .collect();
+            .collect::<Vec<&str>>()
+            .join(" ");
         let correct_exit_code = if matches.get_flag("strict") {
             Some(&0)
         } else {
@@ -177,11 +178,13 @@ impl CmdRun {
         };
 
         let output = Command::new(LAUNCH_SHELL_COMMAND)
-            .args([LAUNCH_SHELL_FLAG])
-            .args(cmd)
+            .arg(LAUNCH_SHELL_FLAG)
+            .arg(cmd)
             .current_dir(working_dir)
             .output()
             .with_context(|| "Fail to run shell")?;
+
+        println!("{:?}", output);
 
         let stdout = Self::format_whitespace(String::from_utf8_lossy(&output.stdout), inline);
         match (output.status.code(), correct_exit_code) {
