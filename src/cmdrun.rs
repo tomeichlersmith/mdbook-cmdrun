@@ -161,7 +161,7 @@ impl CmdRun {
 
     // This method is public for unit tests
     pub fn run_cmdrun(command: String, working_dir: &str, inline: bool) -> Result<String> {
-        let parser = make_cmdrun_parser();
+        let parser = make_cmdrun_parser().no_binary_name(true);
         let matches = parser.try_get_matches_from(command.split_whitespace())?;
 
         let cmd : String = matches
@@ -179,32 +179,25 @@ impl CmdRun {
 
         let output = Command::new(LAUNCH_SHELL_COMMAND)
             .arg(LAUNCH_SHELL_FLAG)
-            .arg(cmd)
+            .arg(cmd.clone())
             .current_dir(working_dir)
             .output()
             .with_context(|| "Fail to run shell")?;
 
-        println!("{:?}", output);
-
         let stdout = Self::format_whitespace(String::from_utf8_lossy(&output.stdout), inline);
         match (output.status.code(), correct_exit_code) {
-            (None, _) => Ok(format!("'{command}' was ended before completing.")),
+            (None, _) => Ok(format!("'{cmd}' was ended before completing.")),
             (Some(code), Some(correct_code)) => {
                 if code != *correct_code {
                     Ok(
                     format!(
-                        "**cmdrun error**: '{command}' returned exit code {code} instead of {correct_code}.\n{0}\n{1}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr))
+                        "**cmdrun error**: '{cmd}' returned exit code {code} instead of {correct_code}.\n{0}\n{1}", stdout, String::from_utf8_lossy(&output.stderr))
                 )
                 } else {
                     Ok(stdout)
                 }
-            }
-            (Some(_code), None) => {
-                // no correct code specified, program exited with some code _code
-                // could put default check requiring code to be zero here but
-                // that would break current behavior
-                Ok(stdout)
-            }
+            },
+            (Some(_code), None) => Ok(stdout)
         }
     }
 }
