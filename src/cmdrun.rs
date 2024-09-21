@@ -162,7 +162,15 @@ impl CmdRun {
     // This method is public for unit tests
     pub fn run_cmdrun(command: String, working_dir: &str, inline: bool) -> Result<String> {
         let parser = make_cmdrun_parser().no_binary_name(true);
-        let matches = parser.try_get_matches_from(command.split_whitespace())?;
+        let matches = parser.try_get_matches_from(
+            shellwords::split(&command)?
+            .into_iter()
+            .map(|w| if w.contains(char::is_whitespace) {
+                format!("'{w}'")
+            } else {
+                w
+            })
+        )?;
 
         let cmd : String = matches
             .try_get_many::<String>("cmd")
@@ -177,6 +185,7 @@ impl CmdRun {
             matches.try_get_one("expect-return-code")?
         };
 
+        //println!("{}", cmd);
         let output = Command::new(LAUNCH_SHELL_COMMAND)
             .arg(LAUNCH_SHELL_FLAG)
             .arg(cmd.clone())
