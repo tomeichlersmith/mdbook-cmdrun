@@ -161,41 +161,52 @@ impl CmdRun {
 
     // This method is public for unit tests
     pub fn run_cmdrun(command: String, working_dir: &str, inline: bool) -> Result<String> {
+        let mut log = std::fs::File::create("cmdrun.log").unwrap();
+        use std::io::Write;
         let parser = make_cmdrun_parser().no_binary_name(true);
+
+        write!(log, "Raw String:\n{}\n", command).unwrap();
+        write!(log, "Shellwords:\n{:?}\n", shellwords::split(&command)).unwrap();
+
         let matches = parser.try_get_matches_from(
             shellwords::split(&command)?
             .into_iter()
+            //.map(|w| shellwords::escape(&w))
             .map(|w| if w.contains(char::is_whitespace) {
                 format!("'{w}'")
             } else {
                 w
             })
         )?;
+        write!(log, "Clap Matches:\n{:?}\n", matches).unwrap();
 
-        let cmd : String = matches
+        let cmd_words = matches
             .try_get_many::<String>("cmd")
             .expect("able to parse a command and not get Err")
             .expect("able to parse a command and not get None")
             .map(|s| s.as_str())
-            .collect::<Vec<&str>>()
-            .join(" ");
+            .collect::<Vec<&str>>();
+        let cmd : String = shellwords::join(&cmd_words);
+         //   .join(" ");
         let correct_exit_code = if matches.get_flag("strict") {
             Some(&0)
         } else {
             matches.try_get_one("expect-return-code")?
         };
+        write!(log, "Reconstructed Command:\n{:?}\n", cmd).unwrap();
 
-        //println!("{}", cmd);
         let output = Command::new(LAUNCH_SHELL_COMMAND)
             .arg(LAUNCH_SHELL_FLAG)
             .arg(cmd.clone())
+            //.args(cmd.clone())
             .current_dir(working_dir)
             .output()
             .with_context(|| "Fail to run shell")?;
 
+        write!(log, "Output:\n{:?}\n", output).unwrap();
         let stdout = Self::format_whitespace(String::from_utf8_lossy(&output.stdout), inline);
         match (output.status.code(), correct_exit_code) {
-            (None, _) => Ok(format!("'{cmd}' was ended before completing.")),
+            (None, _) => Ok(format!("'{cmd:?}' was ended before completing.")),
             (Some(code), Some(correct_code)) => {
                 if code != *correct_code {
                     Ok(

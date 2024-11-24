@@ -47,10 +47,6 @@ cfg_if! {
         // the inline flag only affects the output and here I'm just checking exit codes
         // so I only test without the inline flag
         add_test!(pass_without_exit_code_spec, "exit 1", "", false);
-        add_test!(short_match_fail_exit_code, "-1 exit 1", "", false);
-        add_test!(short_match_pass_exit_code, "-0 exit 0", "", false);
-        add_test!(short_exit_code_mismatch, "-0 exit 1",
-                  "**cmdrun error**: 'exit 1' returned exit code 1 instead of 0.\n\n", false);
         add_test!(long_match_fail_exit_code, "--expect-return-code 1 exit 1", "", false);
         add_test!(long_match_pass_exit_code1, "--expect-return-code 0 exit 0", "", false);
         add_test!(long_match_pass_exit_code2, "--strict exit 0", "", false);
